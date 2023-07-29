@@ -3,43 +3,52 @@
 set -euo pipefail
 
 function main() {
-	if [[ "$#" -ne 1 ]]; then
-		print-global-usage
-		exit 1
-	fi
+	local COMMAND FIRST_ARG
+	FIRST_ARG="$1"
+	shift
 
-	case "$1" in
+	case "${FIRST_ARG}" in
 	backup)
-		backup-paperless
+		COMMAND=backup-paperless
 		;;
 	check)
-		check-scan-folder
+		COMMAND=check-scan-folder
 		;;
 	rename)
-		rename-scanned-documents
+		COMMAND=rename-scanned-documents
 		;;
-	ocr)
-		ocr-scanned-documents
+	to-pdf)
+		COMMAND=document-folder-to-pdf
 		;;
 	-h | --help)
 		print-global-usage
+		exit 0
 		;;
 	*)
 		print-global-usage
 		exit 1
 		;;
 	esac
+
+	if [[ "${COMMAND}" == "document-folder-to-pdf" ]]; then
+		"${COMMAND}" "$@"
+	else
+		if [[ $# -ne 0 ]]; then
+			die "Error: Command '${COMMAND}' does not take any arguments."
+		fi
+		"${COMMAND}"
+	fi
 }
 
 function print-global-usage() {
 	cat <<EOF
-Aufruf: $0 <backup|check|rename|ocr|-h|--help>
+Aufruf: $0 <backup|check|rename|to-pdf|-h|--help>
 
 -h|--help: Zeigt diese Hilfe an.
 backup: Führt ein Backup der Paperless-NGX-Datenbank durch.
 check: Prüft, ob ein Scan-Ordner für automatische Weiterverarbeitung geeignet ist.
 rename: Gruppiert Vorder- und Rückseiten gescannter Dokumente zueinander.
-ocr: Erstellt eine durchsuchbare PDF-Datei aus einem Dokumentordner
+to-pdf: Erstellt eine durchsuchbare PDF-Datei aus einem Dokumentordner
 EOF
 }
 
@@ -107,6 +116,32 @@ function rename-scanned-documents() {
 	rename 's/-Front-(\d+).png/-$1-Front.png/' ./*
 }
 
+function document-folder-to-pdf() {
+	if [[ $# -ne 1 ]]; then
+		die "Error: Command 'document-folder-to-pdf' requires exactly one argument."
+	fi
+
+	local INPUT_FOLDER TARGET_FILE
+	INPUT_FOLDER="$1"
+	TARGET_FILE="$(basename "$INPUT_FOLDER").pdf"
+
+	if [[ ! -r "$INPUT_FOLDER" || ! -d "$INPUT_FOLDER" ]]; then
+		echo "Error: Input folder '$INPUT_FOLDER' does not exist, is not readable or is not a directory" >&2
+		exit 1
+	fi
+	cd "$INPUT_FOLDER"
+
+	# Disable Multithreading
+	# Since the script is usually run in parallel, it would cause overuse of the
+	# CPU if Tesseract itself was using multiple threads. See
+	# https://github.com/tesseract-ocr/tesseract/issues/1600#issuecomment-393917656
+	# for a brief description.
+	export OMP_THREAD_LIMIT=1
+	find . -type f -iname "*.png" | sort | tesseract --dpi 300 -c textonly_pdf=1 -l deu - textonly pdf
+	img2pdf ./*.jpg -o images.pdf
+	pdftk textonly.pdf multibackground images.pdf output ../"${TARGET_FILE}"
+}
+
 function get-nof-docs() {
 	local NOF_FRONT NOF_RUECK WIDTH
 	NOF_FRONT=$(find . -iname "*-Front-*.png" -exec echo \; | wc -l)
@@ -119,7 +154,7 @@ function die() {
 	local MSG EXIT_CODE
 	MSG="$1"
 	EXIT_CODE="${2:-1}"
-	echo "${MSG}"
+	echo "${MSG}" >&2
 	exit "${EXIT_CODE}"
 }
 
