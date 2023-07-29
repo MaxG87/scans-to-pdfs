@@ -2,11 +2,56 @@
 
 set -euo pipefail
 
-ssh raspberry "cd /opt/paperless-ngx; docker-compose exec -T webserver document_exporter ../export"
-rsync -a raspberry:/media/Daten/paperless-ngx/export/ /media/Daten/paperless-ngx-backup
+function main() {
+	if [[ "$#" -ne 1 ]]; then
+		print-global-usage
+		exit 1
+	fi
 
-# Create a Tarball with Zstandard compression. Since the backup is already
-# compressed (PDFs are compressed, images are compressed), we use the fastest
-# compression method. A quick experiment suggests that Zstandard is much faster
-# than GZip while achieving a better compression ratio, even in this use case.
-tar -acf ~/Dokumente/paperless-ngx-backup-"$(date +%Y-%m-%d)".tar.zst -C /media/Daten/ paperless-ngx-backup
+	case "$1" in
+	backup)
+		backup-paperless
+		;;
+	check)
+		check-scan-folder
+		;;
+	rename)
+		rename-scanned-documents
+		;;
+	ocr)
+		ocr-scanned-documents
+		;;
+	-h | --help)
+		print-global-usage
+		;;
+	*)
+		print-global-usage
+		exit 1
+		;;
+	esac
+}
+
+function print-global-usage() {
+	cat <<EOF
+Aufruf: $0 <backup|check|rename|ocr|-h|--help>
+
+-h|--help: Zeigt diese Hilfe an.
+backup: Führt ein Backup der Paperless-NGX-Datenbank durch.
+check: Prüft, ob ein Scan-Ordner für automatische Weiterverarbeitung geeignet ist.
+rename: Gruppiert Vorder- und Rückseiten gescannter Dokumente zueinander.
+ocr: Erstellt eine durchsuchbare PDF-Datei aus einem Dokumentordner
+EOF
+}
+
+function backup-paperless() {
+	ssh raspberry "cd /opt/paperless-ngx; docker-compose exec -T webserver document_exporter ../export"
+	rsync -a raspberry:/media/Daten/paperless-ngx/export/ /media/Daten/paperless-ngx-backup
+
+	# Create a Tarball with Zstandard compression. Since the backup is already
+	# compressed (PDFs are compressed, images are compressed), we use the fastest
+	# compression method. A quick experiment suggests that Zstandard is much faster
+	# than GZip while achieving a better compression ratio, even in this use case.
+	tar -acf ~/Dokumente/paperless-ngx-backup-"$(date +%Y-%m-%d)".tar.zst -C /media/Daten/ paperless-ngx-backup
+}
+
+main "$@"
