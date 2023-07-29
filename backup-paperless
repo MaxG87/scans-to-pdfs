@@ -54,4 +54,73 @@ function backup-paperless() {
 	tar -acf ~/Dokumente/paperless-ngx-backup-"$(date +%Y-%m-%d)".tar.zst -C /media/Daten/ paperless-ngx-backup
 }
 
+function check-scan-folder() {
+	local TITLE EXT NOF_FRONT NOF_RUECK WIDTH
+
+	# shellcheck disable=SC2012
+	# Using `find` would require to get rid of the leading './', which is not worth
+	# the effort. We simply can use `ls -1` instead.
+	read -r TITLE _ _ EXT < <(ls -1 | head -n 1 | tr '.-' ' ')
+
+	# Check that all file names are in the format
+	# Gemischte_Dokumente-(Front|Rück)-<number>.png
+	# shellcheck disable=SC2010
+	if ls -1 | grep -qvE "^${TITLE}-(Front|Rück)-[0-9]+\.${EXT}\$"; then
+		die "Error: Found files that do not match the expected format."
+	fi
+
+	# Check that there are as many Front as Rück
+	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
+	if [[ "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
+		die "Error: Found different number of Front and Rück files."
+	fi
+
+	# Check that all files are consecutivly numbered
+	WIDTH=${#NOF_FRONT}
+	seq "$NOF_FRONT" | xargs printf "%0${WIDTH}d\n" |
+		while read -r num; do
+			for side in Front Rück; do
+				local CURRENT_FILE="${TITLE}-${side}-${num}.png"
+				if ! [[ -f "${CURRENT_FILE}" ]]; then
+					echo "Error: Missing file ${CURRENT_FILE}."
+					exit 1
+				fi
+			done
+		done
+}
+
+function rename-scanned-documents() {
+	check-scan-folder
+
+	local NOF_FRONT NOF_RUECK WIDTH
+	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
+	if [[ "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
+		die "Error: Found different number of Front and Rück files."
+	fi
+
+	# Rename files
+	for f in *Rück*; do
+		read -r title suffix srcnum ext < <(echo "$f" | tr '.-' ' ')
+		destnum=$((NOF_RUECK - 10#$srcnum + 1))
+		mv "$f" "${title}-$(printf "%0${WIDTH}d" "$destnum")-${suffix}.${ext}"
+	done
+	rename 's/-Front-(\d+).png/-$1-Front.png/' ./*
+}
+
+function get-nof-docs() {
+	local NOF_FRONT NOF_RUECK WIDTH
+	NOF_FRONT=$(find . -iname "*-Front-*.png" -exec echo \; | wc -l)
+	NOF_RUECK=$(find . -iname "*-Rück-*.png" -exec echo \; | wc -l)
+	WIDTH=${#NOF_FRONT}
+	echo "${NOF_FRONT} ${NOF_RUECK} ${WIDTH}"
+}
+
+function die() {
+	local MSG EXIT_CODE
+	MSG="$1"
+	EXIT_CODE="${2:-1}"
+	echo "${MSG}"
+	exit "${EXIT_CODE}"
+}
+
 main "$@"
