@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ssh raspberry "cd /opt/paperless-ngx; docker-compose exec -T webserver document_exporter ../export"
+rsync -a raspberry:/media/Daten/paperless-ngx/export/ /media/Daten/paperless-ngx-backup
+
+# Create a Tarball with Zstandard compression. Since the backup is already
+# compressed (PDFs are compressed, images are compressed), we use the fastest
+# compression method. A quick experiment suggests that Zstandard is much faster
+# than GZip while achieving a better compression ratio, even in this use case.
+tar -acf ~/Dokumente/paperless-ngx-backup-"$(date +%Y-%m-%d)".tar.zst -C /media/Daten/ paperless-ngx-backup
