@@ -77,7 +77,8 @@ function check-scan-folder() {
 	read -r TITLE _ _ EXT < <(ls -1 | head -n 1 | tr '.-' ' ')
 
 	# Check that all file names are in the format
-	# Gemischte_Dokumente-(Front|Rück)-<number>.png
+	# <TITLE>-(Front|Rück)-<number>.png, where title must not contain a dash
+	# and a period.
 	# shellcheck disable=SC2010
 	if ls -1 | grep -qvE "^${TITLE}-(Front|Rück)-[0-9]+\.${EXT}\$"; then
 		die "Error: Found files that do not match the expected format."
