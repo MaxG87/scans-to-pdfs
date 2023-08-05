@@ -69,7 +69,7 @@ function backup-paperless() {
 }
 
 function check-scan-folder() {
-	local TITLE EXT NOF_FRONT NOF_RUECK WIDTH
+	local TITLE EXT NOF_FRONT NOF_RUECK WIDTH SIDES
 
 	# shellcheck disable=SC2012
 	# Using `find` would require to get rid of the leading './', which is not worth
@@ -86,15 +86,21 @@ function check-scan-folder() {
 
 	# Check that there are as many Front as Rück
 	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
-	if [[ "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
+	if [[ "${NOF_RUECK}" -gt 0 && "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
 		die "Error: Found different number of Front and Rück files."
+	fi
+
+	SIDES=(Front)
+	if [[ "${NOF_RUECK}" -eq 0 ]]; then
+		echo "Warning: Found no Rück files." >&2
+		SIDES+=(Rueck)
 	fi
 
 	# Check that all files are consecutivly numbered
 	WIDTH=${#NOF_FRONT}
 	seq "$NOF_FRONT" | xargs printf "%0${WIDTH}d\n" |
 		while read -r num; do
-			for side in Front Rück; do
+			for side in "${SIDES[@]}"; do
 				local CURRENT_FILE="${TITLE}-${side}-${num}.png"
 				if ! [[ -f "${CURRENT_FILE}" ]]; then
 					echo "Error: Missing file ${CURRENT_FILE}."
