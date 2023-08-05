@@ -4,9 +4,14 @@ set -euo pipefail
 
 function main() {
 	local COMMAND FIRST_ARG
+
+	if [[ $# -eq 0 ]]; then
+		print-global-usage
+		exit 1
+	fi
+
 	FIRST_ARG="$1"
 	shift
-
 	case "${FIRST_ARG}" in
 	backup)
 		COMMAND=backup-paperless
