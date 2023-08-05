@@ -113,18 +113,20 @@ function check-scan-folder() {
 function rename-scanned-documents() {
 	check-scan-folder
 
-	local NOF_FRONT NOF_RUECK WIDTH
+	local NOF_FRONT NOF_RUECK WIDTH SIDES
 	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
-	if [[ "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
+	if [[ "${NOF_RUECK}" -gt 0 && "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
 		die "Error: Found different number of Front and Rück files."
 	fi
 
 	# Rename files
-	for f in *Rück*; do
-		read -r title suffix srcnum ext < <(echo "$f" | tr '.-' ' ')
-		destnum=$((NOF_RUECK - 10#$srcnum + 1))
-		mv "$f" "${title}-$(printf "%0${WIDTH}d" "$destnum")-${suffix}.${ext}"
-	done
+	if [[ "${NOF_RUECK}" -gt 0 ]]; then
+		for f in *Rück*; do
+			read -r title suffix srcnum ext < <(echo "$f" | tr '.-' ' ')
+			destnum=$((NOF_RUECK - 10#$srcnum + 1))
+			mv "$f" "${title}-$(printf "%0${WIDTH}d" "$destnum")-${suffix}.${ext}"
+		done
+	fi
 	rename 's/-Front-(\d+).png/-$1-Front.png/' ./*
 }
 
