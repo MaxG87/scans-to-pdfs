@@ -22,6 +22,9 @@ function main() {
 	rename)
 		COMMAND=rename-scanned-documents
 		;;
+	to-document-folder)
+		COMMAND=to-document-folder
+		;;
 	to-pdf)
 		COMMAND=document-folder-to-pdf
 		;;
@@ -53,6 +56,7 @@ Aufruf: $0 <backup|check|rename|to-pdf|-h|--help>
 backup: Führt ein Backup der Paperless-NGX-Datenbank durch.
 check: Prüft, ob ein Scan-Ordner für automatische Weiterverarbeitung geeignet ist.
 rename: Gruppiert Vorder- und Rückseiten gescannter Dokumente zueinander.
+to-document-folder: Erstellt Dokumentenordner aus einem Scan-Ordner.
 to-pdf: Erstellt eine durchsuchbare PDF-Datei aus einem Dokumentordner
 EOF
 }
@@ -128,6 +132,16 @@ function rename-scanned-documents() {
 		done
 	fi
 	rename 's/-Front-(\d+).png/-$1-Front.png/' ./*
+}
+
+function scan-folder-to-document-folder() {
+	local dir title num suffix ext
+	for f in *Front*; do
+		read -r title num suffix ext < <(echo "$f" | tr '.-' ' ')
+		dir="${title}_${num}"
+		mkdir "${dir}"
+		mv ./*"${num}"*."${ext}" "${dir}"
+	done
 }
 
 function document-folder-to-pdf() {
