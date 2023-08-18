@@ -90,8 +90,12 @@ function check-scan-folder() {
 
 	# Check that there are as many Front as Rück
 	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
-	if [[ "${NOF_RUECK}" -gt 0 && "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
-		die "Error: Found different number of Front and Rück files."
+	if [[ "${NOF_RUECK}" -gt 0 ]]; then
+		if [[ "${NOF_RUECK}" -lt "${NOF_FRONT}" ]]; then
+			die "Error: Found more Front than Rück files."
+		elif [[ "${NOF_RUECK}" -gt "${NOF_FRONT}" ]]; then
+			die "Error: Found more Rück than Front files."
+		fi
 	fi
 
 	SIDES=(Front)
@@ -120,6 +124,7 @@ function rename-scanned-documents() {
 	local NOF_FRONT NOF_RUECK WIDTH SIDES
 	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
 	if [[ "${NOF_RUECK}" -gt 0 && "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
+		# Assumed to be unreachable, since check-scan-folder already checks this.
 		die "Error: Found different number of Front and Rück files."
 	fi
 
