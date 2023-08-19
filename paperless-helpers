@@ -44,7 +44,7 @@ function main() {
 		;;
 	esac
 
-	if [[ "${COMMAND}" == "document-folder-to-pdf" ]]; then
+	if echo "${COMMAND}" | grep -qE "document-folder-to-pdf|rename"; then
 		"${COMMAND}" "$@"
 	else
 		if [[ $# -ne 0 ]]; then
@@ -79,7 +79,9 @@ function backup-paperless() {
 }
 
 function check-scan-folder() {
-	local TITLE EXT NOF_FRONT NOF_RUECK WIDTH SIDES
+	local IGNORE_MISSING TITLE EXT NOF_FRONT NOF_RUECK WIDTH SIDES
+
+	IGNORE_MISSING="${1:-false}"
 
 	# shellcheck disable=SC2012
 	# Using `find` would require to get rid of the leading './', which is not worth
@@ -112,6 +114,9 @@ function check-scan-folder() {
 	fi
 
 	# Check that all files are consecutivly numbered
+	if [[ "${IGNORE_MISSING}" == "true" ]]; then
+		return
+	fi
 	WIDTH=${#NOF_FRONT}
 	seq "$NOF_FRONT" | xargs printf "%0${WIDTH}d\n" |
 		while read -r num; do
@@ -126,9 +131,37 @@ function check-scan-folder() {
 }
 
 function rename-scanned-documents() {
-	check-scan-folder
+	local USAGE HELP IGNORE_MISSING NOF_FRONT NOF_RUECK WIDTH SIDES
+	USAGE="Usage: $0 rename [--ignore-missing|-h|--help]"
+	HELP="Bennene Dateien im aktuellen Ordner um, sodass Vorder- und Rückseiten zueinander gruppiert sind. Die Dateien müssen im Format <TITLE>-(Front|Rück)-<number>.png vorliegen, wobei <TITLE> nicht mit einem Bindestrich oder einem Punkt beginnen darf. Die Dateien müssen fortlaufend nummeriert sein.\n\nWenn die Option --ignore-missing angegeben wird, wird nicht geprüft, ob alle die Dateien fortlaufend nummeriert sind."
 
-	local NOF_FRONT NOF_RUECK WIDTH SIDES
+	case $# in
+	0)
+		IGNORE_MISSING=false
+		;;
+	1)
+		case "$1" in
+		--ignore-missing)
+			IGNORE_MISSING=true
+			;;
+		-h | --help)
+			echo "$USAGE"
+			echo
+			echo -e "$HELP" | fmt
+			exit 0
+			;;
+		*)
+			die "$USAGE"
+			;;
+		esac
+		;;
+	*)
+		die "$USAGE"
+		;;
+	esac
+
+	check-scan-folder "${IGNORE_MISSING}"
+
 	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
 	if [[ "${NOF_RUECK}" -gt 0 && "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
 		# Assumed to be unreachable, since check-scan-folder already checks this.
