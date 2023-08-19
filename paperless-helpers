@@ -101,6 +101,7 @@ function check-scan-folder() {
 	SIDES=(Front)
 	if [[ "${NOF_RUECK}" -eq 0 ]]; then
 		echo "Warning: Found no Rück files." >&2
+	else
 		SIDES+=(Rueck)
 	fi
 
