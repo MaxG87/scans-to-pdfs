@@ -23,7 +23,7 @@ function main() {
 		COMMAND=rename-scanned-documents
 		;;
 	to-document-folder)
-		COMMAND=to-document-folder
+		COMMAND=scan-folder-to-document-folder
 		;;
 	to-pdf)
 		COMMAND=document-folder-to-pdf
