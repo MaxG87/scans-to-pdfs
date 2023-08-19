@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+VERSION="1.0.0"
+
 function main() {
 	local COMMAND FIRST_ARG
 
@@ -27,6 +29,10 @@ function main() {
 		;;
 	to-pdf)
 		COMMAND=document-folder-to-pdf
+		;;
+	--version)
+		echo "paperless-helpers ${VERSION}"
+		exit 0
 		;;
 	-h | --help)
 		print-global-usage
