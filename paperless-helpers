@@ -110,7 +110,7 @@ function check-scan-folder() {
 	if [[ "${NOF_RUECK}" -eq 0 ]]; then
 		echo "Warning: Found no Rück files." >&2
 	else
-		SIDES+=(Rueck)
+		SIDES+=(Rück)
 	fi
 
 	# Check that all files are consecutivly numbered
