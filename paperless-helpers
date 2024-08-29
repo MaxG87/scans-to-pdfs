@@ -176,7 +176,10 @@ function rename-scanned-documents() {
             mv "$f" "${title}-$(printf "%0${WIDTH}d" "$destnum")-${suffix}.${ext}"
         done
     fi
-    rename 's/-Front-(\d+).png/-$1-Front.png/' ./*
+    for f in *Front*; do
+        read -r title suffix num ext < <(echo "$f" | tr '.-' ' ')
+        mv "$f" "${title}-$(printf "%0${WIDTH}d" "$num")-${suffix}.${ext}"
+    done
 }
 
 function scan-folder-to-document-folder() {
