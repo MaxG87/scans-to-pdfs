@@ -5,57 +5,57 @@ set -euo pipefail
 VERSION="1.0.0"
 
 function main() {
-	local COMMAND FIRST_ARG
+    local COMMAND FIRST_ARG
 
-	if [[ $# -eq 0 ]]; then
-		print-global-usage
-		exit 1
-	fi
+    if [[ $# -eq 0 ]]; then
+        print-global-usage
+        exit 1
+    fi
 
-	FIRST_ARG="$1"
-	shift
-	case "${FIRST_ARG}" in
-	backup)
-		COMMAND=backup-paperless
-		;;
-	check)
-		COMMAND=check-scan-folder
-		;;
-	rename)
-		COMMAND=rename-scanned-documents
-		;;
-	to-document-folder)
-		COMMAND=scan-folder-to-document-folder
-		;;
-	to-pdf)
-		COMMAND=document-folder-to-pdf
-		;;
-	--version)
-		echo "paperless-helpers ${VERSION}"
-		exit 0
-		;;
-	-h | --help)
-		print-global-usage
-		exit 0
-		;;
-	*)
-		print-global-usage
-		exit 1
-		;;
-	esac
+    FIRST_ARG="$1"
+    shift
+    case "${FIRST_ARG}" in
+        backup)
+            COMMAND=backup-paperless
+            ;;
+        check)
+            COMMAND=check-scan-folder
+            ;;
+        rename)
+            COMMAND=rename-scanned-documents
+            ;;
+        to-document-folder)
+            COMMAND=scan-folder-to-document-folder
+            ;;
+        to-pdf)
+            COMMAND=document-folder-to-pdf
+            ;;
+        --version)
+            echo "paperless-helpers ${VERSION}"
+            exit 0
+            ;;
+        -h | --help)
+            print-global-usage
+            exit 0
+            ;;
+        *)
+            print-global-usage
+            exit 1
+            ;;
+    esac
 
-	if echo "${COMMAND}" | grep -qE "document-folder-to-pdf|rename"; then
-		"${COMMAND}" "$@"
-	else
-		if [[ $# -ne 0 ]]; then
-			die "Error: Command '${COMMAND}' does not take any arguments."
-		fi
-		"${COMMAND}"
-	fi
+    if echo "${COMMAND}" | grep -qE "document-folder-to-pdf|rename"; then
+        "${COMMAND}" "$@"
+    else
+        if [[ $# -ne 0 ]]; then
+            die "Error: Command '${COMMAND}' does not take any arguments."
+        fi
+        "${COMMAND}"
+    fi
 }
 
 function print-global-usage() {
-	cat <<EOF
+    cat <<EOF
 Aufruf: $0 <backup|check|rename|to-pdf|-h|--help>
 
 -h|--help: Zeigt diese Hilfe an.
@@ -68,167 +68,167 @@ EOF
 }
 
 function backup-paperless() {
-	ssh raspberry "cd /opt/paperless-ngx; docker-compose exec -T webserver document_exporter ../export"
-	rsync -a raspberry:/media/Daten/paperless-ngx/export/ /media/Daten/paperless-ngx-backup
+    ssh raspberry "cd /opt/paperless-ngx; docker-compose exec -T webserver document_exporter ../export"
+    rsync -a raspberry:/media/Daten/paperless-ngx/export/ /media/Daten/paperless-ngx-backup
 
-	# Create a Tarball with Zstandard compression. Since the backup is already
-	# compressed (PDFs are compressed, images are compressed), we use the fastest
-	# compression method. A quick experiment suggests that Zstandard is much faster
-	# than GZip while achieving a better compression ratio, even in this use case.
-	tar -acf ~/Dokumente/paperless-ngx-backup-"$(date +%Y-%m-%d)".tar.zst -C /media/Daten/ paperless-ngx-backup
+    # Create a Tarball with Zstandard compression. Since the backup is already
+    # compressed (PDFs are compressed, images are compressed), we use the fastest
+    # compression method. A quick experiment suggests that Zstandard is much faster
+    # than GZip while achieving a better compression ratio, even in this use case.
+    tar -acf ~/Dokumente/paperless-ngx-backup-"$(date +%Y-%m-%d)".tar.zst -C /media/Daten/ paperless-ngx-backup
 }
 
 function check-scan-folder() {
-	local IGNORE_MISSING TITLE EXT NOF_FRONT NOF_RUECK WIDTH SIDES
+    local IGNORE_MISSING TITLE EXT NOF_FRONT NOF_RUECK WIDTH SIDES
 
-	IGNORE_MISSING="${1:-false}"
+    IGNORE_MISSING="${1:-false}"
 
-	# shellcheck disable=SC2012
-	# Using `find` would require to get rid of the leading './', which is not worth
-	# the effort. We simply can use `ls -1` instead.
-	read -r TITLE _ _ EXT < <(ls -1 | head -n 1 | tr '.-' ' ')
+    # shellcheck disable=SC2012
+    # Using `find` would require to get rid of the leading './', which is not worth
+    # the effort. We simply can use `ls -1` instead.
+    read -r TITLE _ _ EXT < <(ls -1 | head -n 1 | tr '.-' ' ')
 
-	# Check that all file names are in the format
-	# <TITLE>-(Front|Rück)-<number>.png, where title must not contain a dash
-	# and a period.
-	# shellcheck disable=SC2010
-	if ls -1 | grep -qvE "^${TITLE}-(Front|Rück)-[0-9]+\.${EXT}\$"; then
-		die "Error: Found files that do not match the expected format."
-	fi
+    # Check that all file names are in the format
+    # <TITLE>-(Front|Rück)-<number>.png, where title must not contain a dash
+    # and a period.
+    # shellcheck disable=SC2010
+    if ls -1 | grep -qvE "^${TITLE}-(Front|Rück)-[0-9]+\.${EXT}\$"; then
+        die "Error: Found files that do not match the expected format."
+    fi
 
-	# Check that there are as many Front as Rück
-	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
-	if [[ "${NOF_RUECK}" -gt 0 ]]; then
-		if [[ "${NOF_RUECK}" -lt "${NOF_FRONT}" ]]; then
-			die "Error: Found more Front than Rück files."
-		elif [[ "${NOF_RUECK}" -gt "${NOF_FRONT}" ]]; then
-			die "Error: Found more Rück than Front files."
-		fi
-	fi
+    # Check that there are as many Front as Rück
+    read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
+    if [[ "${NOF_RUECK}" -gt 0 ]]; then
+        if [[ "${NOF_RUECK}" -lt "${NOF_FRONT}" ]]; then
+            die "Error: Found more Front than Rück files."
+        elif [[ "${NOF_RUECK}" -gt "${NOF_FRONT}" ]]; then
+            die "Error: Found more Rück than Front files."
+        fi
+    fi
 
-	SIDES=(Front)
-	if [[ "${NOF_RUECK}" -eq 0 ]]; then
-		echo "Warning: Found no Rück files." >&2
-	else
-		SIDES+=(Rück)
-	fi
+    SIDES=(Front)
+    if [[ "${NOF_RUECK}" -eq 0 ]]; then
+        echo "Warning: Found no Rück files." >&2
+    else
+        SIDES+=(Rück)
+    fi
 
-	# Check that all files are consecutivly numbered
-	if [[ "${IGNORE_MISSING}" == "true" ]]; then
-		return
-	fi
-	WIDTH=${#NOF_FRONT}
-	seq "$NOF_FRONT" | xargs printf "%0${WIDTH}d\n" |
-		while read -r num; do
-			for side in "${SIDES[@]}"; do
-				local CURRENT_FILE="${TITLE}-${side}-${num}.png"
-				if ! [[ -f "${CURRENT_FILE}" ]]; then
-					echo "Error: Missing file ${CURRENT_FILE}."
-					exit 1
-				fi
-			done
-		done
+    # Check that all files are consecutivly numbered
+    if [[ "${IGNORE_MISSING}" == "true" ]]; then
+        return
+    fi
+    WIDTH=${#NOF_FRONT}
+    seq "$NOF_FRONT" | xargs printf "%0${WIDTH}d\n" |
+        while read -r num; do
+            for side in "${SIDES[@]}"; do
+                local CURRENT_FILE="${TITLE}-${side}-${num}.png"
+                if ! [[ -f "${CURRENT_FILE}" ]]; then
+                    echo "Error: Missing file ${CURRENT_FILE}."
+                    exit 1
+                fi
+            done
+        done
 }
 
 function rename-scanned-documents() {
-	local USAGE HELP IGNORE_MISSING NOF_FRONT NOF_RUECK WIDTH SIDES
-	USAGE="Usage: $0 rename [--ignore-missing|-h|--help]"
-	HELP="Bennene Dateien im aktuellen Ordner um, sodass Vorder- und Rückseiten zueinander gruppiert sind. Die Dateien müssen im Format <TITLE>-(Front|Rück)-<number>.png vorliegen, wobei <TITLE> nicht mit einem Bindestrich oder einem Punkt beginnen darf. Die Dateien müssen fortlaufend nummeriert sein.\n\nWenn die Option --ignore-missing angegeben wird, wird nicht geprüft, ob alle die Dateien fortlaufend nummeriert sind."
+    local USAGE HELP IGNORE_MISSING NOF_FRONT NOF_RUECK WIDTH SIDES
+    USAGE="Usage: $0 rename [--ignore-missing|-h|--help]"
+    HELP="Bennene Dateien im aktuellen Ordner um, sodass Vorder- und Rückseiten zueinander gruppiert sind. Die Dateien müssen im Format <TITLE>-(Front|Rück)-<number>.png vorliegen, wobei <TITLE> nicht mit einem Bindestrich oder einem Punkt beginnen darf. Die Dateien müssen fortlaufend nummeriert sein.\n\nWenn die Option --ignore-missing angegeben wird, wird nicht geprüft, ob alle die Dateien fortlaufend nummeriert sind."
 
-	case $# in
-	0)
-		IGNORE_MISSING=false
-		;;
-	1)
-		case "$1" in
-		--ignore-missing)
-			IGNORE_MISSING=true
-			;;
-		-h | --help)
-			echo "$USAGE"
-			echo
-			echo -e "$HELP" | fmt
-			exit 0
-			;;
-		*)
-			die "$USAGE"
-			;;
-		esac
-		;;
-	*)
-		die "$USAGE"
-		;;
-	esac
+    case $# in
+        0)
+            IGNORE_MISSING=false
+            ;;
+        1)
+            case "$1" in
+                --ignore-missing)
+                    IGNORE_MISSING=true
+                    ;;
+                -h | --help)
+                    echo "$USAGE"
+                    echo
+                    echo -e "$HELP" | fmt
+                    exit 0
+                    ;;
+                *)
+                    die "$USAGE"
+                    ;;
+            esac
+            ;;
+        *)
+            die "$USAGE"
+            ;;
+    esac
 
-	check-scan-folder "${IGNORE_MISSING}"
+    check-scan-folder "${IGNORE_MISSING}"
 
-	read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
-	if [[ "${NOF_RUECK}" -gt 0 && "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
-		# Assumed to be unreachable, since check-scan-folder already checks this.
-		die "Error: Found different number of Front and Rück files."
-	fi
+    read -r NOF_FRONT NOF_RUECK WIDTH < <(get-nof-docs)
+    if [[ "${NOF_RUECK}" -gt 0 && "${NOF_FRONT}" -ne "${NOF_RUECK}" ]]; then
+        # Assumed to be unreachable, since check-scan-folder already checks this.
+        die "Error: Found different number of Front and Rück files."
+    fi
 
-	# Rename files
-	if [[ "${NOF_RUECK}" -gt 0 ]]; then
-		for f in *Rück*; do
-			read -r title suffix srcnum ext < <(echo "$f" | tr '.-' ' ')
-			destnum=$((NOF_RUECK - 10#$srcnum + 1))
-			mv "$f" "${title}-$(printf "%0${WIDTH}d" "$destnum")-${suffix}.${ext}"
-		done
-	fi
-	rename 's/-Front-(\d+).png/-$1-Front.png/' ./*
+    # Rename files
+    if [[ "${NOF_RUECK}" -gt 0 ]]; then
+        for f in *Rück*; do
+            read -r title suffix srcnum ext < <(echo "$f" | tr '.-' ' ')
+            destnum=$((NOF_RUECK - 10#$srcnum + 1))
+            mv "$f" "${title}-$(printf "%0${WIDTH}d" "$destnum")-${suffix}.${ext}"
+        done
+    fi
+    rename 's/-Front-(\d+).png/-$1-Front.png/' ./*
 }
 
 function scan-folder-to-document-folder() {
-	local dir title num suffix ext
-	for f in *Front*; do
-		read -r title num suffix ext < <(echo "$f" | tr '.-' ' ')
-		dir="${title}_${num}"
-		mkdir "${dir}"
-		mv ./*"${num}"*."${ext}" "${dir}"
-	done
+    local dir title num suffix ext
+    for f in *Front*; do
+        read -r title num suffix ext < <(echo "$f" | tr '.-' ' ')
+        dir="${title}_${num}"
+        mkdir "${dir}"
+        mv ./*"${num}"*."${ext}" "${dir}"
+    done
 }
 
 function document-folder-to-pdf() {
-	if [[ $# -ne 1 ]]; then
-		die "Error: Command 'document-folder-to-pdf' requires exactly one argument."
-	fi
+    if [[ $# -ne 1 ]]; then
+        die "Error: Command 'document-folder-to-pdf' requires exactly one argument."
+    fi
 
-	local INPUT_FOLDER TARGET_FILE
-	INPUT_FOLDER="$1"
-	TARGET_FILE="$(basename "$INPUT_FOLDER").pdf"
+    local INPUT_FOLDER TARGET_FILE
+    INPUT_FOLDER="$1"
+    TARGET_FILE="$(basename "$INPUT_FOLDER").pdf"
 
-	if [[ ! -r "$INPUT_FOLDER" || ! -d "$INPUT_FOLDER" ]]; then
-		echo "Error: Input folder '$INPUT_FOLDER' does not exist, is not readable or is not a directory" >&2
-		exit 1
-	fi
-	cd "$INPUT_FOLDER"
+    if [[ ! -r "$INPUT_FOLDER" || ! -d "$INPUT_FOLDER" ]]; then
+        echo "Error: Input folder '$INPUT_FOLDER' does not exist, is not readable or is not a directory" >&2
+        exit 1
+    fi
+    cd "$INPUT_FOLDER"
 
-	# Disable Multithreading
-	# Since the script is usually run in parallel, it would cause overuse of the
-	# CPU if Tesseract itself was using multiple threads. See
-	# https://github.com/tesseract-ocr/tesseract/issues/1600#issuecomment-393917656
-	# for a brief description.
-	export OMP_THREAD_LIMIT=1
-	find . -type f -iname "*.png" | sort | tesseract --dpi 300 -c textonly_pdf=1 -l deu - textonly pdf
-	img2pdf ./*.jpg -o images.pdf
-	pdftk textonly.pdf multibackground images.pdf output ../"${TARGET_FILE}"
+    # Disable Multithreading
+    # Since the script is usually run in parallel, it would cause overuse of the
+    # CPU if Tesseract itself was using multiple threads. See
+    # https://github.com/tesseract-ocr/tesseract/issues/1600#issuecomment-393917656
+    # for a brief description.
+    export OMP_THREAD_LIMIT=1
+    find . -type f -iname "*.png" | sort | tesseract --dpi 300 -c textonly_pdf=1 -l deu - textonly pdf
+    img2pdf ./*.jpg -o images.pdf
+    pdftk textonly.pdf multibackground images.pdf output ../"${TARGET_FILE}"
 }
 
 function get-nof-docs() {
-	local NOF_FRONT NOF_RUECK WIDTH
-	NOF_FRONT=$(find . -iname "*-Front-*.png" -exec echo \; | wc -l)
-	NOF_RUECK=$(find . -iname "*-Rück-*.png" -exec echo \; | wc -l)
-	WIDTH=${#NOF_FRONT}
-	echo "${NOF_FRONT} ${NOF_RUECK} ${WIDTH}"
+    local NOF_FRONT NOF_RUECK WIDTH
+    NOF_FRONT=$(find . -iname "*-Front-*.png" -exec echo \; | wc -l)
+    NOF_RUECK=$(find . -iname "*-Rück-*.png" -exec echo \; | wc -l)
+    WIDTH=${#NOF_FRONT}
+    echo "${NOF_FRONT} ${NOF_RUECK} ${WIDTH}"
 }
 
 function die() {
-	local MSG EXIT_CODE
-	MSG="$1"
-	EXIT_CODE="${2:-1}"
-	echo "${MSG}" >&2
-	exit "${EXIT_CODE}"
+    local MSG EXIT_CODE
+    MSG="$1"
+    EXIT_CODE="${2:-1}"
+    echo "${MSG}" >&2
+    exit "${EXIT_CODE}"
 }
 
 main "$@"
