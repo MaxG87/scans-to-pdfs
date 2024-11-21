@@ -8,12 +8,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install shellcheck and shfmt
         run: |
           sudo apt update
           sudo apt install -y shellcheck shfmt
       - name: Check formatting
-        run: shfmt -d .
+        run: shfmt -d -i 4 -ci .
       - name: Lint with shellcheck
         run: shellcheck paperless-helpers
