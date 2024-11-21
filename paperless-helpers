@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION="1.1.0"
+VERSION="1.2.0"
 
 function main() {
     local COMMAND FIRST_ARG
@@ -68,7 +68,12 @@ EOF
 }
 
 function backup-paperless() {
-    rsync -a raspberry:/media/Daten/paperless-ngx/export/ /media/Daten/paperless-ngx-backup
+    rsync \
+        --delete \
+        --progress \
+        --archive \
+        raspberry:/media/Daten/paperless-ngx/export/ \
+        /media/Daten/paperless-ngx-backup
 }
 
 function check-scan-folder() {
