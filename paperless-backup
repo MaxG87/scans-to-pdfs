@@ -4,5 +4,5 @@ set -euo pipefail
 
 DOCKER_COMPOSE_FILE="$1"
 PASSPHRASE_FILE="$2"
-PASSPHRASE="$(cat $PASSPHRASE_FILE)"
+PASSPHRASE="$(cat "$PASSPHRASE_FILE")"
 docker-compose -f "$DOCKER_COMPOSE_FILE" exec -T webserver document_exporter ../export --passphrase "$PASSPHRASE"
