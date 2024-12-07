@@ -1,13 +1,14 @@
 [Unit]
 Description=Create backup of Paperless documents
-RequiresMountsFor=/media/Daten/
+ConditionPathExists=/persistent-data
+ConditionPathExists=/opt/paperless-ngx/docker-compose.yml
 
 [Service]
 Type=oneshot
 SetCredentialEncrypted=paperless-backup-encryption: \
-        Whxqht+dQJax1aZeCGLxmiAAAAABAAAADAAAABAAAACEHLL54l+qryTuYlwAAAAAvQF2r \
-        v5HIlUm2kQspDCcx8wB7NTqSKlLKNQMAZcB8hUJ3ZYspf4oIDYTbCXt/LAiL/gn+0Q+zA \
-        MbYn9FbDSmKtqYoCmuvlRJuF0cogb76U4baqbMKA==
+        Whxqht+dQJax1aZeCGLxmiAAAAABAAAADAAAABAAAAD7bch2RVn4X9hr7TYAAAAA2Zh8/ \
+        qUwQjUOY0dXIal4UtsxKeVnzYlyOBL2MFAP5fPPU8qkiAKCJivThA77HOgWJfjplh5F3H \
+        C0eJPOBxl2AnbbvsNYbz/DXshp6E0zsrK8OkiVvQ==
 ExecStart=/usr/bin/paperless-backup /opt/paperless-ngx/docker-compose.yml %d/paperless-backup-encryption
 
 [Install]
