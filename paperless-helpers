@@ -72,7 +72,7 @@ function backup-paperless() {
         --delete \
         --progress \
         --archive \
-        raspberry:/media/Daten/paperless-ngx/export/ \
+        familienkiste:/persistent-data/paperless-ngx/export/ \
         /media/Daten/paperless-ngx-backup
 }
 
