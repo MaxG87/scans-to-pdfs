@@ -115,7 +115,6 @@ function check-scan-folder() {
     if [[ "${IGNORE_MISSING}" == "true" ]]; then
         return
     fi
-    WIDTH=${#NOF_FRONT}
     seq "$NOF_FRONT" | xargs printf "%0${WIDTH}d\n" |
         while read -r num; do
             for side in "${SIDES[@]}"; do
@@ -220,7 +219,13 @@ function get-nof-docs() {
     local NOF_FRONT NOF_RUECK WIDTH
     NOF_FRONT=$(find . -iname "*-Front-*.png" -exec echo \; | wc -l)
     NOF_RUECK=$(find . -iname "*-Rück-*.png" -exec echo \; | wc -l)
-    WIDTH=${#NOF_FRONT}
+    WIDTH=$(
+        find . -iname "*-Front-*.png" |
+            sed -E 's/.*Front-([[:digit:]]+).png/\1/' |
+            head -1 |
+            wc -c
+    )
+    WIDTH=$((WIDTH - 1)) # Remove trailing newline
     echo "${NOF_FRONT} ${NOF_RUECK} ${WIDTH}"
 }
 
