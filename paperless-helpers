@@ -44,7 +44,7 @@ function main() {
             ;;
     esac
 
-    if echo "${COMMAND}" | grep -qE "document-folder-to-pdf|rename"; then
+    if echo "${COMMAND}" | grep -qE "document-folder-to-pdf|rename|backup"; then
         "${COMMAND}" "$@"
     else
         if [[ $# -ne 0 ]]; then
@@ -59,21 +59,39 @@ function print-global-usage() {
 Aufruf: $0 <backup|check|rename|to-pdf|-h|--help>
 
 -h|--help: Zeigt diese Hilfe an.
-backup: Führt ein Backup der Paperless-NGX-Datenbank durch.
+backup [DEST_DIR]: Führt ein Backup der Paperless-NGX-Datenbank nach DEST_DIR durch.
 check: Prüft, ob ein Scan-Ordner für automatische Weiterverarbeitung geeignet ist.
 rename: Gruppiert Vorder- und Rückseiten gescannter Dokumente zueinander.
 to-document-folder: Erstellt Dokumentenordner aus einem Scan-Ordner.
-to-pdf: Erstellt eine durchsuchbare PDF-Datei aus einem Dokumentordner
+to-pdf [DOCUMENT_FOLDER]: Erstellt eine durchsuchbare PDF-Datei aus einem Dokumentordner
 EOF
 }
 
 function backup-paperless() {
+    if [[ $# -ne 1 ]]; then
+        die "Error: Command 'backup' requires exactly one argument."
+    fi
+
+    local destDir="$1"
+
+    if [[ -e "$destDir" ]]; then
+        # If the destination does not exist, rsync would create it. This is
+        # perfectly fine and very welcome.
+        # Since all other checks would fail on a missing directory, they are
+        # executed only if the destination does exist.
+        if [[ ! -d "$destDir" ]]; then
+            die "Error: Input folder '$destDir' is not a directory"
+        elif [[ ! -w "$destDir" ]]; then
+            die "Error: Input folder '$destDir' is not writeable"
+        fi
+    fi
+
     rsync \
         --delete \
         --progress \
         --archive \
         familienkiste:/persistent-data/paperless-ngx/export/ \
-        /media/Daten/paperless-ngx-backup
+        "$destDir"
 }
 
 function check-scan-folder() {
